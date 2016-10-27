@@ -20,7 +20,7 @@ Usage:
   vm vnc <name>
 """)
 
-# TODO create, delete, clone support
+# TODO create, delete, clone, rename support
 
 
 def sh(cmd):
