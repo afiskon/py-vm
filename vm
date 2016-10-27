@@ -5,15 +5,18 @@ import re
 import sys
 
 
+def die(msg):
+	print(msg)
+	sys.exit(1)
+
 def usage():
-    print("""
+    die("""
 Usage:
   vm list
   vm start <name>
   vm stop <name>
   vm ssh <name>
 """)
-    sys.exit(1)
 
 
 def sh(cmd):
@@ -30,8 +33,8 @@ def main():
 	arg = None
 	if len(sys.argv) >= 3:
 		arg = sys.argv[2]
-
-	# TODO: arg should be [A-Za-z0-9_]
+		if not re.match("""^[A-Za-z0-9_]+$""", arg):
+			die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
 
 	if cmd == "list":
 	 	run("vboxmanage list vms --long | egrep '^(Name|State)'")
