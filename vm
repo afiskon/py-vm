@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import subprocess
+import sys
+
+
+def usage():
+    print("""
+Usage:
+  vm list
+  vm start <name>
+  vm stop <name>
+""")
+    sys.exit(1)
+
+
+def sh(cmd):
+	subprocess.call(cmd, shell=True)
+
+
+def main():
+	if len(sys.argv) < 2:
+		usage()
+
+	cmd = sys.argv[1]
+	arg = None
+	if len(sys.argv) >= 3:
+		arg = sys.argv[2]
+
+	if cmd == "list":
+	 	sh("vboxmanage list vms --long | egrep '^(Name|State)'")
+	elif arg is not None:
+		if cmd == "start":
+			sh("vboxmanage startvm --type headless {}".format(arg))
+		elif cmd == "stop":
+			sh("vboxmanage controlvm {} poweroff".format(arg))
+		else:
+			usage()
+	else:
+		usage()
+
+if __name__ == "__main__":
+	main()
