@@ -16,6 +16,7 @@ Usage:
   vm start <name>
   vm stop <name>
   vm ssh <name>
+  vm vnc <name>
 """)
 
 
@@ -37,6 +38,7 @@ def main():
 			die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
 
 	if cmd == "list":
+		# TODO better formatting and sorting
 	 	run("vboxmanage list vms --long | egrep '^(Name|State)'")
 	elif arg is not None:
 		if cmd == "start":
@@ -47,6 +49,10 @@ def main():
 			tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(arg))
 			port = re.search("""host port = (\d+)""", tmp).group(1)
 			run("ssh -p {} localhost".format(port))
+		elif cmd == "vnc":
+			tmp = sh("vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(arg))
+			port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
+			run('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | vncviewer localhost:{} PasswordFile=/dev/stdin'''.format(port))
 		else:
 			usage()
 	else:
