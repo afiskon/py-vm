@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import subprocess
+import re
 import sys
 
 
@@ -10,13 +11,16 @@ Usage:
   vm list
   vm start <name>
   vm stop <name>
+  vm ssh <name>
 """)
     sys.exit(1)
 
 
 def sh(cmd):
-	subprocess.call(cmd, shell=True)
+	return subprocess.check_output(cmd, shell=True).decode('utf-8')
 
+def run(cmd):
+	subprocess.call(cmd, shell=True)
 
 def main():
 	if len(sys.argv) < 2:
@@ -27,13 +31,19 @@ def main():
 	if len(sys.argv) >= 3:
 		arg = sys.argv[2]
 
+	# TODO: arg should be [A-Za-z0-9_]
+
 	if cmd == "list":
-	 	sh("vboxmanage list vms --long | egrep '^(Name|State)'")
+	 	run("vboxmanage list vms --long | egrep '^(Name|State)'")
 	elif arg is not None:
 		if cmd == "start":
-			sh("vboxmanage startvm --type headless {}".format(arg))
+			run("vboxmanage startvm --type headless {}".format(arg))
 		elif cmd == "stop":
-			sh("vboxmanage controlvm {} poweroff".format(arg))
+			run("vboxmanage controlvm {} poweroff".format(arg))
+		elif cmd == "ssh":
+			tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(arg))
+			port = re.search("""host port = (\d+)""", tmp).group(1)
+			run("ssh -p {} localhost".format(port))
 		else:
 			usage()
 	else:
