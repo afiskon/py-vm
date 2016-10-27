@@ -52,7 +52,8 @@ def main():
 		elif cmd == "vnc":
 			tmp = sh("vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(arg))
 			port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
-			run('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | vncviewer localhost:{} PasswordFile=/dev/stdin'''.format(port))
+			run(('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | ''' +
+				'''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(port))
 		else:
 			usage()
 	else:
