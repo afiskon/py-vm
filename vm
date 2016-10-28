@@ -31,6 +31,8 @@ Usage:
   vm clone <src> <dst>
 """)
 
+# TODO: `change-ports` support
+# TODO: `ssh-copy-id` support
 # TODO: `modify` support (almost like create)
 # TODO: export/import support
 # TODO: bash auto completion
