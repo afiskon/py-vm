@@ -54,8 +54,8 @@ def run(cmd):
 def validate_str(arg):
     if arg is None:
         return None
-    if not re.match("""^[A-Za-z0-9_-]+$""", arg):
-        die("Bad argument '{}' - should be [A-Za-z90-9_-]+".format(arg))
+    if not re.match("""^[A-Za-z0-9_-]{1,32}$""", arg):
+        die("Bad argument '{}' - should be [A-Za-z90-9_-]{1,32}".format(arg))
     return arg
 
 
@@ -74,13 +74,13 @@ def list_vms():
     running_vms = set(
         sh('''vboxmanage list runningvms | cut -d '"' -f 2''').strip().split("\n"))
     # TODO: print cpus, mem_mb, disk_mb, ssh_port, vnc_port
-    print("{:16} {:12}".format("VM", "STATUS"))
-    print("-" * (16 + 1 + 12))
+    print("{:32} {:12}".format("VM", "STATUS"))
+    print("-" * (32 + 1 + 12))
     for vm in all_vms:
         status = "powered off"
         if vm in running_vms:
             status = "running"
-        print("{:16} {:12}".format(vm, status))
+        print("{:32} {:12}".format(vm, status))
 
 
 def list_os_types():
@@ -144,11 +144,12 @@ def configure_port_forwarding(vm):
     vnc_port = get_max_vnc_port() + 1
     print("VM '{}' - changing ssh port to {} and vnc port to {}".format(vm, ssh_port, vnc_port))
     run("vboxmanage modifyvm {} --natpf1 delete ssh-forwarding 2>/dev/null".format(vm))
-    sh('''vboxmanage modifyvm {} --natpf1 "ssh-forwarding,tcp,,{},,22"'''.format(vm, ssh_port))
+    sh("vboxmanage modifyvm {} --nic2 natnetwork --nat-network2 {}".format(vm, nat_network_name))
+    sh('vboxmanage modifyvm {} --natpf1 "ssh-forwarding,tcp,,{},,22"'.format(vm, ssh_port))
     sh("vboxmanage modifyvm {} --vrde on".format(vm))
     sh("vboxmanage modifyvm {} --vrdeaddress 127.0.0.1".format(vm))
     sh("vboxmanage modifyvm {} --vrdeport {}".format(vm, vnc_port))
-    sh('''vboxmanage modifyvm {} --vrdeproperty VNCPassword="{}"'''.format(vm, vnc_plain_pass))
+    sh('vboxmanage modifyvm {} --vrdeproperty VNCPassword="{}"'.format(vm, vnc_plain_pass))
 
 
 def create_vm(args):
