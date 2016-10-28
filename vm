@@ -24,15 +24,15 @@ Usage:
   vm list
   vm start <name>
   vm stop <name>
+  vm vnc <name>
   vm ssh <name>
   vm ssh-copy-id <name>
-  vm vnc <name>
+  vm change-ports <name>
   vm delete <name>
   vm rename <src> <dst>
   vm clone <src> <dst>
 """)
 
-# TODO: `change-ports` support
 # TODO: `modify` support (almost like create)
 # TODO: export/import support
 # TODO: bash auto completion
@@ -206,6 +206,8 @@ def main():
             port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
             run(('''(echo -en '{}' | ''' +
                  '''vncviewer localhost:{} PasswordFile=/dev/stdin) &''').format(vnc_encrypted_pass, port))
+        elif cmd == "change-ports":
+            configure_port_forwarding(src)
         elif cmd == "delete":
             sh("vboxmanage unregistervm {} --delete".format(src))
         else:
