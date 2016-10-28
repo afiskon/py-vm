@@ -2,10 +2,14 @@
 
 import subprocess
 import re
+import os
 import sys
 
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
+vnc_plain_pass = "secret"
+vnc_encrypted_pass = '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e'
+
 
 def die(msg):
     print(msg)
@@ -15,7 +19,8 @@ def die(msg):
 def usage():
     die("""
 Usage:
-  vm ostypes
+  vm create <name> <type> <cpus> <mem_mb> <disk_mb> <iso_path>
+  vm types
   vm list
   vm start <name>
   vm stop <name>
@@ -26,8 +31,9 @@ Usage:
   vm clone <src> <dst>
 """)
 
-# TODO `create` support + network configuration + port forwarding for ssh/vnc
+# TODO: `modify` support (almost like create)
 # TODO: export/import support
+# TODO: bash auto completion
 
 def sh(cmd):
     """
@@ -43,61 +49,144 @@ def run(cmd):
     return subprocess.call(cmd, shell=True)
 
 
-def validate(arg):
+def validate_str(arg):
     if arg is None:
         return None
-
-    if not re.match("""^[A-Za-z0-9_]+$""", arg):
-        die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
+    if not re.match("""^[A-Za-z0-9_-]+$""", arg):
+        die("Bad argument '{}' - should be [A-Za-z90-9_-]+".format(arg))
     return arg
 
-def list_vms():
-    all_vms = sh('''vboxmanage list vms | cut -d '"' -f 2''').split("\n")
-    all_vms.sort()
-    running_vms = set(sh('''vboxmanage list runningvms | cut -d '"' -f 2''').split("\n"))
 
+def validate_num(num):
+    if num is None:
+        num = ''
+    if not re.match("""^[0-9]+$""", num):
+        die("Bad argument '{}' - should be a number".format(num))
+    return int(num)
+
+
+def list_vms():
+    all_vms = sh(
+        '''vboxmanage list vms | cut -d '"' -f 2''').strip().split("\n")
+    all_vms.sort()
+    running_vms = set(
+        sh('''vboxmanage list runningvms | cut -d '"' -f 2''').strip().split("\n"))
+    # TODO: print cpus, mem_mb, disk_mb, ssh_port, vnc_port
     print("{:16} {:12}".format("VM", "STATUS"))
-    print("-" * (16+1+12))
+    print("-" * (16 + 1 + 12))
     for vm in all_vms:
-        if vm == "":
-            continue
         status = "powered off"
         if vm in running_vms:
             status = "running"
         print("{:16} {:12}".format(vm, status))
 
-def list_ostypes():
-    lines = sh('''vboxmanage list ostypes | egrep ^ID''').split("\n")
-    types = []
+
+def list_os_types():
+    lines = sh('''vboxmanage list ostypes | egrep ^ID''').strip().split("\n")
+    vmtypes = []
+    for line in lines:
+        vmtypes.append(re.search('(\\S+)$', line).group(1))
+
+    vmtypes.sort()
+    for vmtype in vmtypes:
+        print(vmtype)
+
+
+def ensure_nat_network_exists():
+    code = run("vboxmanage natnetwork list | grep Name | grep {} > /dev/null".format(
+        nat_network_name))
+    if code != 0:
+        print("Creating {} network ({})".format(
+            nat_network_name, nat_network_addr))
+        sh(("vboxmanage natnetwork add --netname {} --network {} " +
+            "--enable --dhcp on --ipv6 off").format(nat_network_name, nat_network_addr))
+
+
+def get_virtualbox_path():
+    line = sh(
+        """vboxmanage list systemproperties | grep 'Default machine folder'""").strip()
+    return re.search("""(\\S+)$""", line).group(1)
+
+
+def get_max_ssh_port():
+    max_port = 22000
+    lines = sh(
+        "(vboxmanage list vms --long | grep 'ssh-forwarding') || true").split("\n")
     for line in lines:
         if line == "":
             continue
-        types.append(re.search('(\\S+)$', line).group(1))
+        port = int(re.search('host port = (\\d+)', line).group(1))
+        if port > max_port:
+            max_port = port
+    return max_port
 
-    types.sort()
-    for t in types:
-        print(t)
 
-def ensure_nat_network_exists():
-    code = run("vboxmanage natnetwork list | grep Name | grep {}".format(nat_network_name))
-    if code != 0:
-        print("Creating {} network ({})".format(nat_network_name, nat_network_addr))
-        sh(("vboxmanage natnetwork add --netname {} --network {} " +
-            "--enable --dhcp on --ipv6 off").format(nat_network_name, nat_network_addr))
+def get_max_vnc_port():
+    max_port = 33000
+    lines = sh(
+        "(vboxmanage list vms --long | grep 'VRDE property: TCP/Ports') || true").split("\n")
+    for line in lines:
+        if line == "":
+            continue
+        port = int(re.search('"(\\d+)"$', line).group(1))
+        if port > max_port:
+            max_port = port
+    return max_port
+
+
+def configure_port_forwarding(vm):
+    ssh_port = get_max_ssh_port() + 1
+    vnc_port = get_max_vnc_port() + 1
+    print("VM '{}' - changing ssh port to {} and vnc port to {}".format(vm, ssh_port, vnc_port))
+    run("vboxmanage modifyvm {} --natpf1 delete ssh-forwarding 2>/dev/null".format(vm))
+    sh('''vboxmanage modifyvm {} --natpf1 "ssh-forwarding,tcp,,{},,22"'''.format(vm, ssh_port))
+    sh("vboxmanage modifyvm {} --vrde on".format(vm))
+    sh("vboxmanage modifyvm {} --vrdeaddress 127.0.0.1".format(vm))
+    sh("vboxmanage modifyvm {} --vrdeport {}".format(vm, vnc_port))
+    sh('''vboxmanage modifyvm {} --vrdeproperty VNCPassword="{}"'''.format(vm, vnc_plain_pass))
+
+
+def create_vm(args):
+    name = args[2]  # already validated
+    vmtype = args[3]  # already validated
+    cpus = validate_num(args[4])
+    mem_mb = validate_num(args[5])
+    disk_mb = validate_num(args[6])
+    iso_path = args[7]
+    if not os.path.isfile(iso_path):
+        die("Invalid iso_path '{}' - file doesn't exists (hint: try a full path)".format(iso_path))
+    disk_path = get_virtualbox_path() + "/" + name + "/" + name + ".vdi"
+    sh("vboxmanage createvm --name {} --ostype {} --register".format(name, vmtype))
+    sh(("vboxmanage modifyvm {} --cpus {} --memory {} " +
+        "--audio none --usb off --acpi on --boot1 dvd --nic1 nat").format(name, cpus, mem_mb))
+    sh("vboxmanage createhd --filename {} --size {}".format(disk_path, disk_mb))
+    sh("vboxmanage storagectl {} --name ide-controller --add ide".format(name))
+    sh(("vboxmanage storageattach {} --storagectl ide-controller " +
+        "--port 0 --device 0 --type hdd --medium {}").format(name, disk_path))
+    sh(("vboxmanage storageattach {} --storagectl ide-controller " +
+        "--port 0 --device 1 --type dvddrive --medium {}").format(name, iso_path))
+
+    ensure_nat_network_exists()
+    sh("vboxmanage modifyvm {} --nic2 natnetwork --nat-network2 {}".format(name, nat_network_name))
+
+    configure_port_forwarding(name)
+
 
 def main():
     if len(sys.argv) < 2:
         usage()
 
-    tmp = sys.argv + [None, None]
-    cmd = validate(tmp[1])
-    src = validate(tmp[2])
-    dst = validate(tmp[3])
+    args = sys.argv + [None, None, None, None, None, None]
+    cmd = validate_str(args[1])
+    src = validate_str(args[2])
+    dst = validate_str(args[3])
 
-    if cmd == "list":
+    if cmd == "create":
+        create_vm(args)
+    elif cmd == "list":
         list_vms()
-    elif cmd == "ostypes":
-        list_ostypes()
+    elif cmd == "types":
+        list_os_types()
     elif src is not None and dst is None:
         if cmd == "start":
             sh("vboxmanage startvm --type headless {}".format(src))
@@ -111,8 +200,8 @@ def main():
             tmp = sh(
                 "vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(src))
             port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
-            run(('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | ''' +
-                 '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(port))
+            run(('''echo -en '{}' | ''' +
+                 '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(vnc_encrypted_pass, port))
         elif cmd == "delete":
             sh("vboxmanage unregistervm {} --delete".format(src))
         else:
@@ -121,8 +210,8 @@ def main():
         if cmd == "rename":
             sh("vboxmanage modifyvm {} --name {}".format(src, dst))
         elif cmd == "clone":
-			# TODO create/update ssh/vnc ports, crete network if necessary
             sh("vboxmanage clonevm {} --name {} --register".format(src, dst))
+            configure_port_forwarding(dst)
         else:
             usage()
     else:
