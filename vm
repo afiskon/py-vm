@@ -18,12 +18,12 @@ Usage:
   vm stop <name>
   vm ssh <name>
   vm vnc <name>
+  vm delete <name>
   vm rename <src> <dst>
   vm clone <src> <dst>
 """)
 
-# TODO create, delete, clone, rename support
-
+# TODO create support + network configuration + port forwarding for ssh/vnc
 
 def sh(cmd):
     return subprocess.check_output(cmd, shell=True).decode('utf-8')
@@ -69,12 +69,15 @@ def main():
             port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
             run(('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | ''' +
                  '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(port))
+        elif cmd == "delete":
+            run("vboxmanage unregistervm {} --delete".format(src))
         else:
             usage()
     elif src is not None and dst is not None:
         if cmd == "rename":
             run("vboxmanage modifyvm {} --name {}".format(src, dst))
         elif cmd == "clone":
+			# TODO update ssh/vnc ports
             run("vboxmanage clonevm {} --name {} --register".format(src, dst))
         else:
             usage()
