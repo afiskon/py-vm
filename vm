@@ -28,11 +28,13 @@ Usage:
   vm ssh <name>
   vm ssh-copy-id <name>
   vm change-ports <name>
+  vm eject-disk <name>
   vm delete <name>
   vm rename <src> <dst>
   vm clone <src> <dst>
 """)
 
+# TODO: `insert-disk` support
 # TODO: `modify` support (almost like create)
 # TODO: export/import support
 # TODO: bash auto completion
@@ -73,7 +75,7 @@ def list_vms():
     all_vms.sort()
     running_vms = set(
         sh('''vboxmanage list runningvms | cut -d '"' -f 2''').split("\n"))
-    # TODO: print cpus, mem_mb, disk_mb, ssh_port, vnc_port
+    # TODO: print cpus, mem_mb, disk_mb, ssh_port, vnc_port, iso path
     print("{:32} {:12}".format("VM", "STATUS"))
     print("-" * (32 + 1 + 12))
     for vm in all_vms:
@@ -211,6 +213,9 @@ def main():
                  '''vncviewer localhost:{} PasswordFile=/dev/stdin) &''').format(vnc_encrypted_pass, port))
         elif cmd == "change-ports":
             configure_port_forwarding(src)
+        elif cmd == "eject-disk":
+            sh(("vboxmanage storageattach {} --storagectl ide-controller " +
+                "--port 0 --device 1 --type dvddrive --medium emptydrive").format(src))
         elif cmd == "delete":
             sh("vboxmanage unregistervm {} --delete".format(src))
         else:
