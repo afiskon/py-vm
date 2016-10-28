@@ -25,6 +25,7 @@ Usage:
   vm start <name>
   vm stop <name>
   vm ssh <name>
+  vm ssh-copy-id <name>
   vm vnc <name>
   vm delete <name>
   vm rename <src> <dst>
@@ -32,7 +33,6 @@ Usage:
 """)
 
 # TODO: `change-ports` support
-# TODO: `ssh-copy-id` support
 # TODO: `modify` support (almost like create)
 # TODO: export/import support
 # TODO: bash auto completion
@@ -109,6 +109,9 @@ def get_virtualbox_path():
         """vboxmanage list systemproperties | grep 'Default machine folder'""").strip()
     return re.search("""(\\S+)$""", line).group(1)
 
+def get_vm_ssh_port(vm):
+	line = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(vm))
+	return int(re.search("""host port = (\d+)""", line).group(1))
 
 def get_max_ssh_port():
     max_port = 22000
@@ -173,7 +176,6 @@ def create_vm(args):
 
     configure_port_forwarding(name)
 
-
 def main():
     if len(sys.argv) < 2:
         usage()
@@ -195,9 +197,9 @@ def main():
         elif cmd == "stop":
             sh("vboxmanage controlvm {} poweroff".format(src))
         elif cmd == "ssh":
-            tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(src))
-            port = re.search("""host port = (\d+)""", tmp).group(1)
-            run("ssh -p {} localhost".format(port))
+            run("ssh -p {} localhost".format(get_vm_ssh_port(src)))
+        elif cmd == "ssh-copy-id":
+            run("ssh-copy-id -p {} localhost".format(get_vm_ssh_port(src)))
         elif cmd == "vnc":
             tmp = sh(
                 "vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(src))
