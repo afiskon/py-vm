@@ -5,6 +5,11 @@ import re
 import os
 import sys
 
+# TODO: `insert-disk` support
+# TODO: `modify` support (almost like create)
+# TODO: export/import support
+# TODO: bash auto completion
+
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
 vnc_plain_pass = "secret"
@@ -34,10 +39,6 @@ Usage:
   vm clone <src> <dst>
 """)
 
-# TODO: `insert-disk` support
-# TODO: `modify` support (almost like create)
-# TODO: export/import support
-# TODO: bash auto completion
 
 def sh(cmd):
     """
@@ -113,9 +114,11 @@ def get_virtualbox_path():
         """vboxmanage list systemproperties | grep 'Default machine folder'""").strip()
     return re.search("""(\\S+)$""", line).group(1)
 
+
 def get_vm_ssh_port(vm):
-	line = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(vm))
-	return int(re.search("""host port = (\d+)""", line).group(1))
+    line = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(vm))
+    return int(re.search("""host port = (\d+)""", line).group(1))
+
 
 def get_max_ssh_port():
     max_port = 22000
@@ -180,6 +183,7 @@ def create_vm(args):
     sh("vboxmanage modifyvm {} --nic2 natnetwork --nat-network2 {}".format(name, nat_network_name))
 
     configure_port_forwarding(name)
+
 
 def main():
     if len(sys.argv) < 2:
