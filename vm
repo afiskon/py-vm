@@ -18,6 +18,8 @@ Usage:
   vm stop <name>
   vm ssh <name>
   vm vnc <name>
+  vm rename <src> <dst>
+  vm clone <src> <dst>
 """)
 
 # TODO create, delete, clone, rename support
@@ -31,32 +33,39 @@ def run(cmd):
     subprocess.call(cmd, shell=True)
 
 
+def validate(arg):
+    if arg is None:
+        return None
+
+    if not re.match("""^[A-Za-z0-9_]+$""", arg):
+        die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
+    return arg
+
+
 def main():
     if len(sys.argv) < 2:
         usage()
 
-    cmd = sys.argv[1]
-    arg = None
-    if len(sys.argv) >= 3:
-        arg = sys.argv[2]
-        if not re.match("""^[A-Za-z0-9_]+$""", arg):
-            die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
+    tmp = sys.argv + [None, None]
+    cmd = validate(tmp[1])
+    src = validate(tmp[2])
+    dst = validate(tmp[3])
 
     if cmd == "list":
         # TODO better formatting and sorting
         run("vboxmanage list vms --long | egrep '^(Name|State)'")
-    elif arg is not None:
+    elif src is not None:
         if cmd == "start":
-            run("vboxmanage startvm --type headless {}".format(arg))
+            run("vboxmanage startvm --type headless {}".format(src))
         elif cmd == "stop":
-            run("vboxmanage controlvm {} poweroff".format(arg))
+            run("vboxmanage controlvm {} poweroff".format(src))
         elif cmd == "ssh":
-            tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(arg))
+            tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(src))
             port = re.search("""host port = (\d+)""", tmp).group(1)
             run("ssh -p {} localhost".format(port))
         elif cmd == "vnc":
             tmp = sh(
-                "vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(arg))
+                "vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(src))
             port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
             run(('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | ''' +
                  '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(port))
