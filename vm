@@ -4,6 +4,8 @@ import subprocess
 import re
 import sys
 
+nat_network_name = "VmPyNatNetwork"
+nat_network_addr = "10.128.0.0/16"
 
 def die(msg):
     print(msg)
@@ -27,11 +29,17 @@ Usage:
 # TODO: export/import support
 
 def sh(cmd):
+    """
+    Run given bash command, return output, throw exception on error
+    """
     return subprocess.check_output(cmd, shell=True).decode('utf-8')
 
 
 def run(cmd):
-    subprocess.call(cmd, shell=True)
+    """
+    Run given bash command, return error code
+    """
+    return subprocess.call(cmd, shell=True)
 
 
 def validate(arg):
@@ -57,6 +65,13 @@ def list_vms():
             status = "running"
         print("{:16} {:12}".format(vm, status))
 
+def ensure_nat_network_exists():
+    code = run("vboxmanage natnetwork list | grep Name | grep {}".format(nat_network_name))
+    if code != 0:
+        print("Creating {} network ({})".format(nat_network_name, nat_network_addr))
+        sh(("vboxmanage natnetwork add --netname {} --network {} " +
+            "--enable --dhcp on --ipv6 off").format(nat_network_name, nat_network_addr))
+
 def main():
     if len(sys.argv) < 2:
         usage()
@@ -70,9 +85,9 @@ def main():
         list_vms()
     elif src is not None and dst is None:
         if cmd == "start":
-            run("vboxmanage startvm --type headless {}".format(src))
+            sh("vboxmanage startvm --type headless {}".format(src))
         elif cmd == "stop":
-            run("vboxmanage controlvm {} poweroff".format(src))
+            sh("vboxmanage controlvm {} poweroff".format(src))
         elif cmd == "ssh":
             tmp = sh("vboxmanage showvminfo {} | grep ssh-forwarding".format(src))
             port = re.search("""host port = (\d+)""", tmp).group(1)
@@ -84,15 +99,15 @@ def main():
             run(('''echo -en '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e' | ''' +
                  '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(port))
         elif cmd == "delete":
-            run("vboxmanage unregistervm {} --delete".format(src))
+            sh("vboxmanage unregistervm {} --delete".format(src))
         else:
             usage()
     elif src is not None and dst is not None:
         if cmd == "rename":
-            run("vboxmanage modifyvm {} --name {}".format(src, dst))
+            sh("vboxmanage modifyvm {} --name {}".format(src, dst))
         elif cmd == "clone":
 			# TODO create/update ssh/vnc ports, crete network if necessary
-            run("vboxmanage clonevm {} --name {} --register".format(src, dst))
+            sh("vboxmanage clonevm {} --name {} --register".format(src, dst))
         else:
             usage()
     else:
