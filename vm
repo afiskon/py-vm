@@ -55,7 +55,7 @@ def validate_str(arg):
     if arg is None:
         return None
     if not re.match("""^[A-Za-z0-9_-]{1,32}$""", arg):
-        die("Bad argument '{}' - should be [A-Za-z90-9_-]{1,32}".format(arg))
+        die("Bad argument '{}' - should be [A-Za-z90-9_-] and no longer than 32 characters".format(arg))
     return arg
 
 
