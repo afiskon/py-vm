@@ -7,8 +7,6 @@ import sys
 
 # TODO: `insert-disk` support
 # TODO: `modify` support (almost like create)
-# TODO: export/import support
-# TODO: bash auto completion
 
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
@@ -37,6 +35,8 @@ Usage:
   vm delete <name>
   vm rename <src> <dst>
   vm clone <src> <dst>
+  vm export <name> <file.ova>
+  vm import <name> <file.ova>
 """)
 
 
@@ -57,8 +57,8 @@ def run(cmd):
 def validate_str(arg):
     if arg is None:
         return None
-    if not re.match("""^[A-Za-z0-9_-]{1,32}$""", arg):
-        die("Bad argument '{}' - should be [A-Za-z90-9_-] and no longer than 32 characters".format(arg))
+    if not re.match("""^[A-Za-z0-9_\.-]{1,32}$""", arg):
+        die("""Bad argument '{}' - should be [A-Za-z90-9_\.-] and no longer than 32 characters""".format(arg))
     return arg
 
 
@@ -192,7 +192,9 @@ def main():
     args = sys.argv + [None, None, None, None, None, None]
     cmd = validate_str(args[1])
     src = validate_str(args[2])
-    dst = validate_str(args[3])
+    dst = args[3]
+    if cmd != "import" and cmd != "export":
+      dst = validate_str(dst)
 
     if cmd == "create":
         create_vm(args)
@@ -230,6 +232,14 @@ def main():
         elif cmd == "clone":
             sh("vboxmanage clonevm {} --name {} --register".format(src, dst))
             configure_port_forwarding(dst)
+        elif cmd == "export" or cmd == "import":
+            if not re.match('^.*\.ova$', dst):
+                die("Invalid argument '{}' - should be .ova file".format(dst))
+            if cmd == "export":
+                sh("vboxmanage export {} --output {}".format(src, dst))
+            else:
+                sh("vboxmanage import {} --vsys 0 --vmname {}".format(dst, src))
+                configure_port_forwarding(src)
         else:
             usage()
     else:
