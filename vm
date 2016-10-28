@@ -15,6 +15,7 @@ def die(msg):
 def usage():
     die("""
 Usage:
+  vm ostypes
   vm list
   vm start <name>
   vm stop <name>
@@ -65,6 +66,18 @@ def list_vms():
             status = "running"
         print("{:16} {:12}".format(vm, status))
 
+def list_ostypes():
+    lines = sh('''vboxmanage list ostypes | egrep ^ID''').split("\n")
+    types = []
+    for line in lines:
+        if line == "":
+            continue
+        types.append(re.search('(\\S+)$', line).group(1))
+
+    types.sort()
+    for t in types:
+        print(t)
+
 def ensure_nat_network_exists():
     code = run("vboxmanage natnetwork list | grep Name | grep {}".format(nat_network_name))
     if code != 0:
@@ -83,6 +96,8 @@ def main():
 
     if cmd == "list":
         list_vms()
+    elif cmd == "ostypes":
+        list_ostypes()
     elif src is not None and dst is None:
         if cmd == "start":
             sh("vboxmanage startvm --type headless {}".format(src))
