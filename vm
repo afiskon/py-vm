@@ -41,6 +41,20 @@ def validate(arg):
         die("Bad argument '{}' - should be [A-Za-z90-9_]+".format(arg))
     return arg
 
+def list_vms():
+    all_vms = sh('''vboxmanage list vms | cut -d '"' -f 2''').split("\n")
+    all_vms.sort()
+    running_vms = set(sh('''vboxmanage list runningvms | cut -d '"' -f 2''').split("\n"))
+
+    print("{:16} {:12}".format("VM", "STATUS"))
+    print("-" * (16+1+12))
+    for vm in all_vms:
+        if vm == "":
+            continue
+        status = "powered off"
+        if vm in running_vms:
+            status = "running"
+        print("{:16} {:12}".format(vm, status))
 
 def main():
     if len(sys.argv) < 2:
@@ -52,8 +66,7 @@ def main():
     dst = validate(tmp[3])
 
     if cmd == "list":
-        # TODO better formatting and sorting
-        run("vboxmanage list vms --long | egrep '^(Name|State)'")
+        list_vms()
     elif src is not None and dst is None:
         if cmd == "start":
             run("vboxmanage startvm --type headless {}".format(src))
