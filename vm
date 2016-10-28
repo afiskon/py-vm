@@ -23,7 +23,8 @@ Usage:
   vm clone <src> <dst>
 """)
 
-# TODO create support + network configuration + port forwarding for ssh/vnc
+# TODO `create` support + network configuration + port forwarding for ssh/vnc
+# TODO: export/import support
 
 def sh(cmd):
     return subprocess.check_output(cmd, shell=True).decode('utf-8')
@@ -90,7 +91,7 @@ def main():
         if cmd == "rename":
             run("vboxmanage modifyvm {} --name {}".format(src, dst))
         elif cmd == "clone":
-			# TODO update ssh/vnc ports
+			# TODO create/update ssh/vnc ports, crete network if necessary
             run("vboxmanage clonevm {} --name {} --register".format(src, dst))
         else:
             usage()
