@@ -200,8 +200,8 @@ def main():
             tmp = sh(
                 "vboxmanage showvminfo {} | grep VRDE | grep TCP/Ports".format(src))
             port = re.search("""TCP/Ports  = "(\d+)""", tmp).group(1)
-            run(('''echo -en '{}' | ''' +
-                 '''vncviewer localhost:{} PasswordFile=/dev/stdin''').format(vnc_encrypted_pass, port))
+            run(('''(echo -en '{}' | ''' +
+                 '''vncviewer localhost:{} PasswordFile=/dev/stdin) &''').format(vnc_encrypted_pass, port))
         elif cmd == "delete":
             sh("vboxmanage unregistervm {} --delete".format(src))
         else:
