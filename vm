@@ -69,14 +69,16 @@ def validate_num(num):
 
 def list_vms():
     all_vms = sh(
-        '''vboxmanage list vms | cut -d '"' -f 2''').strip().split("\n")
+        '''vboxmanage list vms | cut -d '"' -f 2''').split("\n")
     all_vms.sort()
     running_vms = set(
-        sh('''vboxmanage list runningvms | cut -d '"' -f 2''').strip().split("\n"))
+        sh('''vboxmanage list runningvms | cut -d '"' -f 2''').split("\n"))
     # TODO: print cpus, mem_mb, disk_mb, ssh_port, vnc_port
     print("{:32} {:12}".format("VM", "STATUS"))
     print("-" * (32 + 1 + 12))
     for vm in all_vms:
+        if vm == "":
+            continue
         status = "powered off"
         if vm in running_vms:
             status = "running"
