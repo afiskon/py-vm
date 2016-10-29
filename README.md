@@ -25,5 +25,6 @@ Usage:
 For proper bash completion add to your ~/.bashrc:
 
 ```
-complete -W 'create types list start stop vnc ssh ssh-copy-id change-ports eject-disk delete rename clone export import' vm
+complete -W 'create types list start stop vnc ssh ssh-copy-id change-ports '\
+'eject-disk delete rename clone export import' vm
 ```
