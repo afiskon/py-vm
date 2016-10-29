@@ -5,9 +5,10 @@ import re
 import os
 import sys
 
-# TODO: `insert-disk` support
-# TODO: `modify` support (almost like create)
-# TODO: `list`: print cpus, mem_mb, disk_mb, ssh_port, vnc_port, iso path
+# TODO: support `insert-disk` command
+# TODO: support `modify` command
+# TODO: support `list-full` command: print cpus, mem_mb, disk_mb,
+# ssh_port, vnc_port, iso path
 
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
@@ -59,7 +60,8 @@ def validate_str(arg):
     if arg is None:
         return None
     if not re.match("""^[A-Za-z0-9_\.-]{1,32}$""", arg):
-        die("""Bad argument '{}' - should be [A-Za-z90-9_\.-] and no longer than 32 characters""".format(arg))
+        die(
+            """Bad argument '{}' - should be [A-Za-z90-9_\.-] and no longer than 32 characters""".format(arg))
     return arg
 
 
@@ -113,7 +115,12 @@ def ensure_nat_network_exists():
 def get_virtualbox_path():
     line = sh(
         """vboxmanage list systemproperties | grep 'Default machine folder'""").strip()
-    return re.search("""(\\S+)$""", line).group(1)
+    path = re.search("""(\\S+)$""", line).group(1)
+    if not os.path.isdir(path):
+        die(("get_virtualbox_path() - '{}' is not a directory\n" +
+             "Hint: path shouldn't contain whitespaces\n" +
+             "Hint: use `vboxmanage setproperty machinefolder /home/user/virtuabox`").format(path))
+    return path
 
 
 def get_vm_ssh_port(vm):
@@ -168,7 +175,7 @@ def create_vm(args):
     disk_mb = validate_num(args[6])
     iso_path = args[7]
     if not os.path.isfile(iso_path):
-        die("Invalid iso_path '{}' - file doesn't exists (hint: try a full path)".format(iso_path))
+        die("Invalid iso_path '{}' - file doesn't exist".format(iso_path))
     disk_path = get_virtualbox_path() + "/" + name + "/" + name + ".vdi"
     sh("vboxmanage createvm --name {} --ostype {} --register".format(name, vmtype))
     sh(("vboxmanage modifyvm {} --cpus {} --memory {} " +
@@ -195,7 +202,7 @@ def main():
     src = validate_str(args[2])
     dst = args[3]
     if cmd != "import" and cmd != "export":
-      dst = validate_str(dst)
+        dst = validate_str(dst)
 
     if cmd == "create":
         create_vm(args)
