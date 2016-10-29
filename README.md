@@ -21,3 +21,9 @@ Usage:
   vm export <name> <file.ova>
   vm import <name> <file.ova>
 ```
+
+For proper bash completion add to your ~/.bashrc:
+
+```
+complete -W 'create types list start stop vnc ssh ssh-copy-id change-ports eject-disk delete rename clone export import' vm
+```

@@ -8,7 +8,7 @@ import sys
 # TODO: support `insert-disk` command
 # TODO: support `modify` command
 # TODO: support `list-full` command: print cpus, mem_mb, disk_mb,
-# ssh_port, vnc_port, iso path
+#       ssh_port, vnc_port, iso path
 
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
