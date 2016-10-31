@@ -28,3 +28,5 @@ For proper bash completion add to your ~/.bashrc:
 complete -W 'create types list start stop vnc ssh ssh-copy-id change-ports '\
 'eject-disk delete rename clone export import' vm
 ```
+
+Reddit discussion: [https://redd.it/5ab2th](https://redd.it/5ab2th).
