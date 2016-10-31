@@ -1,6 +1,6 @@
 # py-vm
 
-Simple CLI wrapper for VirtualBox.
+Simple CLI wrapper for VirtualBox. Could be considered a Vagrant replacement in many cases.
 
 Usage:
 
