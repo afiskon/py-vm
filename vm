@@ -18,13 +18,8 @@ vnc_plain_pass = "secret"
 vnc_encrypted_pass = '\\x2e\\x2d\\xbf\\x57\\x6e\\xb0\\x6c\\x9e'
 
 
-def die(msg):
-    print(msg)
-    sys.exit(1)
-
-
 def usage():
-    die("""
+    sys.exit("""
 Usage:
   vm create <name> <type> <cpus> <mem_mb> <disk_mb> <iso_path>
   vm types
@@ -62,7 +57,7 @@ def validate_str(arg):
     if arg is None:
         return None
     if not re.match("""^[A-Za-z0-9_\.-]{1,32}$""", arg):
-        die(
+        sys.exit(
             """Bad argument '{}' - should be [A-Za-z90-9_\.-] and no longer than 32 characters""".format(arg))
     return arg
 
@@ -71,7 +66,7 @@ def validate_num(num):
     if num is None:
         num = ''
     if not re.match("""^[0-9]+$""", num):
-        die("Bad argument '{}' - should be a number".format(num))
+        sys.exit("Bad argument '{}' - should be a number".format(num))
     return int(num)
 
 
@@ -119,7 +114,7 @@ def get_virtualbox_path():
         """vboxmanage list systemproperties | grep 'Default machine folder'""").strip()
     path = re.search("""(\\S+)$""", line).group(1)
     if not os.path.isdir(path):
-        die(("get_virtualbox_path() - '{}' is not a directory\n" +
+        sys.exit(("get_virtualbox_path() - '{}' is not a directory\n" +
              "Hint: path shouldn't contain whitespaces\n" +
              "Hint: use `vboxmanage setproperty machinefolder /home/user/virtuabox`").format(path))
     return path
@@ -177,7 +172,7 @@ def create_vm(args):
     disk_mb = validate_num(args[6])
     iso_path = args[7]
     if not os.path.isfile(iso_path):
-        die("Invalid iso_path '{}' - file doesn't exist".format(iso_path))
+        sys.exit("Invalid iso_path '{}' - file doesn't exist".format(iso_path))
     disk_path = get_virtualbox_path() + "/" + name + "/" + name + ".vdi"
     sh("vboxmanage createvm --name {} --ostype {} --register".format(name, vmtype))
     sh(("vboxmanage modifyvm {} --cpus {} --memory {} " +
@@ -244,7 +239,7 @@ def main():
             configure_port_forwarding(dst)
         elif cmd == "export" or cmd == "import":
             if not re.match('^.*\.ova$', dst):
-                die("Invalid argument '{}' - should be .ova file".format(dst))
+                sys.exit("Invalid argument '{}' - should be .ova file".format(dst))
             if cmd == "export":
                 sh("vboxmanage export {} --output {}".format(src, dst))
             else:
