@@ -5,6 +5,7 @@ import re
 import os
 import sys
 
+# TODO: support `vm ssh vmname command`
 # TODO: support `insert-disk` command
 # TODO: support `modify` command
 # TODO: support `list-full` command: print cpus, mem_mb, disk_mb,
