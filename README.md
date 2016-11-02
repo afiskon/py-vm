@@ -11,7 +11,7 @@ Usage:
   vm start <name>
   vm stop <name>
   vm vnc <name>
-  vm ssh <name>
+  vm ssh <name> [command]
   vm ssh-copy-id <name>
   vm change-ports <name>
   vm eject-disk <name>
