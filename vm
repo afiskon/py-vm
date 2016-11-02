@@ -5,7 +5,6 @@ import re
 import os
 import sys
 
-# TODO: support `vm ssh vmname command`
 # TODO: support `insert-disk` command
 # TODO: support `modify` command
 # TODO: support `list-full` command: print cpus, mem_mb, disk_mb,
@@ -27,7 +26,7 @@ Usage:
   vm start <name>
   vm stop <name>
   vm vnc <name>
-  vm ssh <name>
+  vm ssh <name> [command]
   vm ssh-copy-id <name>
   vm change-ports <name>
   vm eject-disk <name>
@@ -198,7 +197,7 @@ def main():
     cmd = validate_str(args[1])
     src = validate_str(args[2])
     dst = args[3]
-    if cmd != "import" and cmd != "export":
+    if cmd != "import" and cmd != "export" and cmd != "ssh":
         dst = validate_str(dst)
 
     if cmd == "create":
@@ -232,7 +231,9 @@ def main():
         else:
             usage()
     elif src is not None and dst is not None:
-        if cmd == "rename":
+        if cmd == "ssh":
+            subprocess.call(["ssh", "-p", str(get_vm_ssh_port(src)), "localhost", dst])
+        elif cmd == "rename":
             sh("vboxmanage modifyvm {} --name {}".format(src, dst))
         elif cmd == "clone":
             sh("vboxmanage clonevm {} --name {} --register".format(src, dst))
