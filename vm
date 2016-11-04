@@ -35,6 +35,9 @@ Usage:
   vm clone <src> <dst>
   vm export <name> <file.ova>
   vm import <name> <file.ova>
+
+Homepage:
+  https://github.com/afiskon/py-vm
 """)
 
 
