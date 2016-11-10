@@ -10,6 +10,7 @@ import sys
 # TODO: support `list-full` command: print cpus, mem_mb, disk_mb,
 #       ssh_port, vnc_port, iso path
 # TODO: use argparse: https://docs.python.org/3/library/argparse.html#sub-commands
+# TODO: support cpu affinity
 
 nat_network_name = "VmPyNatNetwork"
 nat_network_addr = "10.128.0.0/16"
