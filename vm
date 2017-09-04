@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# vim: set ai et ts=4 sw=4:
 
 import subprocess
 import re
@@ -80,15 +81,20 @@ def list_vms():
     running_vms = set(
         sh('''vboxmanage list runningvms | cut -d '"' -f 2''').split("\n"))
 
-    print("{:32} {:12}".format("VM", "STATUS"))
-    print("-" * (32 + 1 + 12))
+    print("{:32} {:12}  {:8}".format("VM", "STATUS", "SSH PORT"))
+    print("-" * (32 + 1 + 12 + 2 + 8))
     for vm in all_vms:
         if vm == "":
             continue
         status = "powered off"
         if vm in running_vms:
             status = "running"
-        print("{:32} {:12}".format(vm, status))
+        ssh_port = '  (none)'
+        try:
+            ssh_port = get_vm_ssh_port(vm)
+        except:
+            pass
+        print("{:32} {:12}  {:8}".format(vm, status, ssh_port))
 
 
 def list_os_types():
@@ -165,7 +171,6 @@ def configure_port_forwarding(vm):
     sh("vboxmanage modifyvm {} --vrdeaddress 127.0.0.1".format(vm))
     sh("vboxmanage modifyvm {} --vrdeport {}".format(vm, vnc_port))
     sh('vboxmanage modifyvm {} --vrdeproperty VNCPassword="{}"'.format(vm, vnc_plain_pass))
-
 
 def create_vm(args):
     name = args[2]  # already validated
